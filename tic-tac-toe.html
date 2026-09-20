@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Three in a Row</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --paper: #EDE6D6;
+    --paper-2: #E4DBC6;
+    --ink: #26231D;
+    --ink-soft: #57503F;
+    --line: #3D3226;
+    --blue: #2B4C7E;
+    --blue-soft: #cdd9ea;
+    --red: #A63D40;
+    --red-soft: #f0d6d3;
+    --gold: #C89B2C;
+    --card: #F6F1E4;
+  }
+
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1E1B16;
+      --paper-2: #262219;
+      --ink: #EDE6D6;
+      --ink-soft: #B8AF9C;
+      --line: #C9BFA6;
+      --blue: #7FA3D8;
+      --blue-soft: #2b3c52;
+      --red: #E08A8D;
+      --red-soft: #4a2c2c;
+      --gold: #E3BE5D;
+      --card: #262219;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1E1B16;
+    --paper-2: #262219;
+    --ink: #EDE6D6;
+    --ink-soft: #B8AF9C;
+    --line: #C9BFA6;
+    --blue: #7FA3D8;
+    --blue-soft: #2b3c52;
+    --red: #E08A8D;
+    --red-soft: #4a2c2c;
+    --gold: #E3BE5D;
+    --card: #262219;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(ellipse at 20% 10%, var(--paper-2), transparent 60%),
+      var(--paper);
+    color: var(--ink);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 32px 20px calc(40px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 460px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-size: clamp(2.1rem, 8vw, 2.8rem);
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    line-height: 1;
+  }
+
+  h1 .cross { color: var(--blue); }
+  h1 .naught { color: var(--red); }
+
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .mode-toggle {
+    display: flex;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 999px;
+    padding: 4px;
+    margin: 18px 0 4px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 9px 6px;
+    border-radius: 999px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .mode-btn.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .scoreboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .score {
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 6px;
+    text-align: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .score .label {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+
+  .score .value {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+  }
+
+  .score.turn {
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 0 var(--line);
+  }
+
+  .score.x .value { color: var(--blue); }
+  .score.o .value { color: var(--red); }
+
+  .status {
+    text-align: center;
+    min-height: 1.6em;
+    font-size: 1.05rem;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  .status .who-x { color: var(--blue); }
+  .status .who-o { color: var(--red); }
+
+  .board-frame {
+    position: relative;
+    background: var(--card);
+    border: 3px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 5px 5px 0 var(--line);
+  }
+
+  .board {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    transition: opacity 0.15s ease;
+  }
+
+  .board.locked { opacity: 0.75; }
+
+  .cell {
+    position: relative;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cell { border: 2px solid transparent; }
+  .cell:nth-child(-n+3) { border-top-color: transparent; }
+  .cell:nth-child(n+7) { border-bottom-color: transparent; }
+  .cell:nth-child(3n+1) { border-left-color: transparent; }
+  .cell:nth-child(3n) { border-right-color: transparent; }
+  .cell:not(:nth-child(3n+1)) { border-left-color: var(--line); }
+  .cell:not(:nth-child(-n+3)) { border-top-color: var(--line); }
+
+  .cell svg {
+    width: 58%;
+    height: 58%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .cell path, .cell circle.o-mark {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .cell .mark-x path {
+    stroke: var(--blue);
+    stroke-width: 11;
+    stroke-dasharray: 130;
+    stroke-dashoffset: 130;
+    animation: draw 0.28s ease forwards;
+  }
+  .cell .mark-x path.stroke2 { animation-delay: 0.16s; }
+
+  .cell .mark-o circle {
+    stroke: var(--red);
+    stroke-width: 11;
+    stroke-dasharray: 220;
+    stroke-dashoffset: 220;
+    animation: draw 0.38s ease forwards;
+  }
+
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .cell:hover:not(.filled) .ghost { opacity: 0.28; }
+  .ghost { opacity: 0; transition: opacity 0.1s ease; }
+  .ghost path, .ghost circle { stroke: var(--ink-soft); }
+
+  .cell.win-cell::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 8px;
+    background: var(--gold);
+    opacity: 0.16;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  button.action {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 11px 20px;
+    border-radius: 9px;
+    border: 2px solid var(--line);
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  button.action:active { transform: translateY(1px); }
+
+  button.ghost-btn {
+    background: transparent;
+    color: var(--ink);
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cell .mark-x path, .cell .mark-o circle { animation: none; stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="cross">X</span>'s &amp; <span class="naught">O</span>'s</h1>
+    <p class="subtitle" id="subtitle">Two players, one board, three in a row wins.</p>
+  </header>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" data-mode="human">Two players</button>
+    <button class="mode-btn" data-mode="ai">Vs the AI</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score x" id="scoreX">
+      <div class="label" id="labelX">Player X</div>
+      <div class="value" id="valX">0</div>
+    </div>
+    <div class="score" id="scoreDraw">
+      <div class="label">Draws</div>
+      <div class="value" id="valDraw">0</div>
+    </div>
+    <div class="score o" id="scoreO">
+      <div class="label" id="labelO">Player O</div>
+      <div class="value" id="valO">0</div>
+    </div>
+  </div>
+
+  <p class="status" id="status"></p>
+
+  <div class="board-frame">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="controls">
+    <button class="action" id="newRound">New round</button>
+    <button class="action ghost-btn" id="resetAll">Reset scores</button>
+  </div>
+
+  <footer id="footerNote">Tap a square to play. First to line up three takes the round.</footer>
+</div>
+
+<script>
+(function() {
+  var board = Array(9).fill(null);
+  var current = 'X';
+  var winner = null;
+  var winLine = null;
+  var scores = { X: 0, O: 0, draw: 0 };
+  var gameOver = false;
+  var mode = 'human'; // 'human' or 'ai' (AI always plays O, human is X)
+  var aiThinking = false;
+
+  var boardEl = document.getElementById('board');
+  var statusEl = document.getElementById('status');
+  var subtitleEl = document.getElementById('subtitle');
+  var footerEl = document.getElementById('footerNote');
+  var valX = document.getElementById('valX');
+  var valO = document.getElementById('valO');
+  var valDraw = document.getElementById('valDraw');
+  var labelX = document.getElementById('labelX');
+  var labelO = document.getElementById('labelO');
+  var scoreXEl = document.getElementById('scoreX');
+  var scoreOEl = document.getElementById('scoreO');
+
+  var LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function xMark(ghost) {
+    return '<svg viewBox="0 0 100 100" class="mark-x' + (ghost ? ' ghost' : '') + '">' +
+      '<path class="stroke1" d="M20,20 L80,80"/>' +
+      '<path class="stroke2" d="M80,20 L20,80"/>' +
+    '</svg>';
+  }
+  function oMark(ghost) {
+    return '<svg viewBox="0 0 100 100" class="mark-o' + (ghost ? ' ghost' : '') + '">' +
+      '<circle cx="50" cy="50" r="35"/>' +
+    '</svg>';
+  }
+
+  function render() {
+    boardEl.innerHTML = '';
+    boardEl.classList.toggle('locked', aiThinking);
+    for (var i = 0; i < 9; i++) {
+      var cell = document.createElement('button');
+      cell.className = 'cell' + (board[i] ? ' filled' : '');
+      cell.setAttribute('aria-label', 'Square ' + (i+1) + (board[i] ? ', ' + board[i] : ', empty'));
+      cell.dataset.i = i;
+      if (board[i] === 'X') cell.innerHTML = xMark(false);
+      else if (board[i] === 'O') cell.innerHTML = oMark(false);
+      else if (!gameOver && !aiThinking) cell.innerHTML = current === 'X' ? xMark(true) : oMark(true);
+
+      if (winLine && winLine.indexOf(i) !== -1) cell.classList.add('win-cell');
+
+      cell.addEventListener('click', onCellClick);
+      boardEl.appendChild(cell);
+    }
+    updateStatus();
+    scoreXEl.classList.toggle('turn', current === 'X' && !gameOver);
+    scoreOEl.classList.toggle('turn', current === 'O' && !gameOver);
+  }
+
+  function updateStatus() {
+    var youX = mode === 'ai';
+    if (winner === 'draw') {
+      statusEl.innerHTML = 'It\u2019s a draw \u2014 board\u2019s full.';
+    } else if (winner) {
+      if (youX) {
+        statusEl.innerHTML = winner === 'X'
+          ? '<span class="who-x">You win!</span>'
+          : '<span class="who-o">The AI wins this round.</span>';
+      } else {
+        statusEl.innerHTML = '<span class="who-' + winner.toLowerCase() + '">Player ' + winner + '</span> takes the round.';
+      }
+    } else if (aiThinking) {
+      statusEl.innerHTML = '<span class="who-o">The AI is thinking\u2026</span>';
+    } else {
+      if (youX) {
+        statusEl.innerHTML = '<span class="who-x">Your turn.</span>';
+      } else {
+        statusEl.innerHTML = '<span class="who-' + current.toLowerCase() + '">Player ' + current + '</span>\u2019s turn.';
+      }
+    }
+  }
+
+  function checkWinner(bd) {
+    for (var i = 0; i < LINES.length; i++) {
+      var a = LINES[i][0], b = LINES[i][1], c = LINES[i][2];
+      if (bd[a] && bd[a] === bd[b] && bd[a] === bd[c]) {
+        return { player: bd[a], line: LINES[i] };
+      }
+    }
+    if (bd.every(function(v){ return v; })) return { player: 'draw', line: null };
+    return null;
+  }
+
+  function emptyIndices(bd) {
+    var out = [];
+    for (var i = 0; i < 9; i++) if (!bd[i]) out.push(i);
+    return out;
+  }
+
+  // Unbeatable minimax opponent, plays as 'O' against human 'X'.
+  function minimax(bd, isMaximizing, depth) {
+    var result = checkWinner(bd);
+    if (result) {
+      if (result.player === 'O') return 10 - depth;
+      if (result.player === 'X') return depth - 10;
+      return 0;
+    }
+    var empties = emptyIndices(bd);
+    if (isMaximizing) {
+      var best = -Infinity;
+      for (var i = 0; i < empties.length; i++) {
+        var nb = bd.slice();
+        nb[empties[i]] = 'O';
+        best = Math.max(best, minimax(nb, false, depth + 1));
+      }
+      return best;
+    } else {
+      var worst = Infinity;
+      for (var j = 0; j < empties.length; j++) {
+        var nb2 = bd.slice();
+        nb2[empties[j]] = 'X';
+        worst = Math.min(worst, minimax(nb2, true, depth + 1));
+      }
+      return worst;
+    }
+  }
+
+  function bestAiMove() {
+    var empties = emptyIndices(board);
+    // Opening move: pick center or a corner quickly rather than full search for variety/speed.
+    if (empties.length === 9) return 4;
+    var bestScore = -Infinity;
+    var bestIdx = empties[0];
+    for (var i = 0; i < empties.length; i++) {
+      var nb = board.slice();
+      nb[empties[i]] = 'O';
+      var score = minimax(nb, false, 0);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = empties[i];
+      }
+    }
+    return bestIdx;
+  }
+
+  function onCellClick(e) {
+    if (aiThinking) return;
+    var i = parseInt(e.currentTarget.dataset.i, 10);
+    if (board[i] || gameOver) return;
+    placeMark(i, current);
+  }
+
+  function placeMark(i, mark) {
+    board[i] = mark;
+    var result = checkWinner(board);
+    if (result) {
+      finishRound(result);
+      return;
+    }
+    current = current === 'X' ? 'O' : 'X';
+    render();
+
+    if (mode === 'ai' && current === 'O' && !gameOver) {
+      aiThinking = true;
+      render();
+      setTimeout(function() {
+        var idx = bestAiMove();
+        aiThinking = false;
+        placeMark(idx, 'O');
+      }, 450);
+    }
+  }
+
+  function finishRound(result) {
+    gameOver = true;
+    winner = result.player;
+    winLine = result.line;
+    if (winner === 'draw') scores.draw++;
+    else scores[winner]++;
+    updateScoreboard();
+    render();
+  }
+
+  function updateScoreboard() {
+    valX.textContent = scores.X;
+    valO.textContent = scores.O;
+    valDraw.textContent = scores.draw;
+  }
+
+  function newRound() {
+    board = Array(9).fill(null);
+    current = (winner === 'X') ? 'O' : (winner === 'O' ? 'X' : current);
+    winner = null;
+    winLine = null;
+    gameOver = false;
+    aiThinking = false;
+    render();
+
+    if (mode === 'ai' && current === 'O') {
+      aiThinking = true;
+      render();
+      setTimeout(function() {
+        var idx = bestAiMove();
+        aiThinking = false;
+        placeMark(idx, 'O');
+      }, 450);
+    }
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.mode === m);
+    });
+    if (m === 'ai') {
+      subtitleEl.textContent = 'You\u2019re X. The AI plays O and never loses on purpose.';
+      labelX.textContent = 'You';
+      labelO.textContent = 'AI';
+      footerEl.textContent = 'Tap a square to play. The AI answers right after.';
+    } else {
+      subtitleEl.textContent = 'Two players, one board, three in a row wins.';
+      labelX.textContent = 'Player X';
+      labelO.textContent = 'Player O';
+      footerEl.textContent = 'Tap a square to play. First to line up three takes the round.';
+    }
+    scores = { X: 0, O: 0, draw: 0 };
+    updateScoreboard();
+    current = 'X';
+    newRound();
+  }
+
+  document.querySelectorAll('.mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { setMode(btn.dataset.mode); });
+  });
+
+  document.getElementById('newRound').addEventListener('click', newRound);
+  document.getElementById('resetAll').addEventListener('click', function() {
+    scores = { X: 0, O: 0, draw: 0 };
+    updateScoreboard();
+    newRound();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
